@@ -1,0 +1,24 @@
+#!/usr/bin/env perl
+package App::Prove::Remote::rprove;
+
+use strict;
+use warnings;
+
+use experimental 'signatures';
+
+use App::Prove::Remote::Connector ();
+use Getopt::Long                  ();
+
+exit run() unless caller();
+
+sub run {
+    my ( $host, $verbosity, @tests ) = ('', '');
+    Getopt::Long::GetOptions(
+        'host|h'    => \$host,
+        'verbosity' => \$verbosity,
+    );
+    my $conn = App::Prove::Remote::Connector->new($host, $verbosity);
+    return 0;
+}
+
+1;
