@@ -4,21 +4,64 @@ package App::Prove::Remote::rprove;
 use strict;
 use warnings;
 
-use experimental 'signatures';
-
 use App::Prove::Remote::Connector ();
 use Getopt::Long                  ();
 
 exit run() unless caller();
 
 sub run {
-    my ( $host, $verbosity, @tests ) = ('', '');
+    my ( $host, $verbosity, @tests ) = ('127.0.0.1', 0);
+    Getopt::Long::Configure( 'bundling', 'auto_help', 'pass_through' );
     Getopt::Long::GetOptions(
-        'host|h'    => \$host,
-        'verbosity' => \$verbosity,
+        'host|h=s'      => \$host,
+        'verbosity|v=i' => \$verbosity,
     );
     my $conn = App::Prove::Remote::Connector->new($host, $verbosity);
     return 0;
 }
 
 1;
+
+__END__
+
+=head1 NAME
+
+rprove - Prove wrapper which executes your tests on the remote host
+
+=head1 SYNOPSIS
+
+rprove [options] [file ...]
+
+ Options:
+   -help            You are reading it!
+   -host            Host to connect to. Defaults to 127.0.0.1.
+   -verbosity       How verbose you want this (and the SSH connection) to be
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<-help>
+
+Print a brief help message and exits.
+
+=item B<-host>
+
+Host to connect to. Defaults to 127.0.0.1
+
+=item B<-verbosity>
+
+How verbose you want this to be. Useful if you need to debug
+some strange SSH behavior.
+
+=back
+
+=head1 DESCRIPTION
+
+B<rprove> will locally run prove with a --exec argument which is a shim.
+This (remote_shim.pl) will connect to the remote host for the test in
+question, upload it to a temporary directory and run it on the host.
+Output of the script is then read by the TAP parser as is expected for
+a seamless testing experience *as if you had ran the test locally*.
+
+=cut
