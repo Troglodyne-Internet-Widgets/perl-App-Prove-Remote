@@ -4,24 +4,61 @@ package App::Prove::Remote::rprove;
 use strict;
 use warnings;
 
-use App::Prove::Remote::Connector ();
-use Getopt::Long                  ();
-
-exit run() unless caller();
+if( !caller() ) {
+	$ENV{'RPROVE_HOST'} ? exit remote_shim() : exit run();
+}
 
 sub run {
-    my ( $host, $verbosity, $workdir ) = ( '127.0.0.1', 0, '', 'perl' );
-    Getopt::Long::Configure( 'bundling', 'auto_help', 'pass_through' );
+    my ( $host, $workdir, $interpreter ) = ( '127.0.0.1', 0, '', '/usr/bin/perl' );
+
+	require App::Prove;
+	require Getopt::Long;
+
+    Getopt::Long::Configure( 'auto_help', 'pass_through' );
     Getopt::Long::GetOptions(
         'host|h=s'      => \$host,
-        'verbosity|v=i' => \$verbosity,
 		'workdir=s'     => \$workdir,
 		'interpreter=s' => \$interpreter,
     );
-    my $conn = App::Prove::Remote::Connector->new(
-		$host, $verbosity, $workdir, $interpreter
-	);
-    return 0;
+
+	# Set ENV bitz
+	local @ENV{qw{RPROVE_HOST RPROVE_WORK_DIR RPROVE_INTERPRETER}} = ($host, $workdir, $interpreter);
+
+	my $prove_args = { 'exec' => $0 };
+    my $prove = App::Prove->new($prove_args);
+    $prove->process_args(@ARGV);
+    $prove->merge(1);
+
+	# Run prove
+	return $prove->run ? 0 : 1;
+}
+
+sub remote_shim {
+	require Net::OpenSSH;
+
+	my $host = $ENV{'RPROVE_HOST'} || '127.0.0.1';
+	my $wd   = $ENV{'RPROVE_WORK_DIR'} || '';
+	my $bin  = $ENV{'RPROVE_INTERPRETER'} || '/usr/bin/perl';
+	my $test = $ARGV[0] || die "No test passed in!";
+	my $ssh  = Net::OpenSSH->new($host);
+
+	# Print directly to stdout, as this function merges
+	# STDOUT & STDERR and discards STDIN.
+	# Do this to avoid TTY overflow, and because prove expects
+	# to capture output from STDOUT/ERR anyways.
+	my $system_opts = {
+		'stdout_discard'   => 0,
+		'stderr_discard'   => 0,
+		'stderr_to_stdout' => 1,
+		'stdin_discard'    => 1,
+	};
+
+	# Optionally move to the working directory, run the test.
+	my $cd = $wd ? "cd $wd && " : '';
+	$ssh->system( $system_opts, "${cd}${bin} '$wd/$test'" );
+
+	# Net::OpenSSH sets this value correctly for our purposes here.
+	return $?;
 }
 
 1;
@@ -39,7 +76,8 @@ rprove [options] [file ...]
  Options:
    -help            You are reading it!
    -host            Host to connect to. Defaults to 127.0.0.1.
-   -verbosity       How verbose you want this (and the SSH connection) to be
+   -workdir         Directory to change to before running test(s).
+   -interpreter		Path on remote to test running interpreter. Defaults to /usr/bin/perl
 
 =head1 OPTIONS
 
@@ -52,11 +90,6 @@ Print a brief help message and exits.
 =item B<-host>
 
 Host to connect to. Defaults to 127.0.0.1
-
-=item B<-verbosity>
-
-How verbose you want this to be. Useful if you need to debug
-some strange SSH behavior.
 
 =item B<-wordkir>
 
@@ -73,7 +106,7 @@ or non-perl tests to execute that still emit valid TAP.
 =head1 DESCRIPTION
 
 B<rprove> will locally run prove with a --exec argument which is a shim.
-This (remote_shim.pl) will connect to the remote host for the test in
+This (remote_shim mode) will connect to the remote host for the test in
 question and run it on the host.
 
 Why do this? Because sometimes testing certain scenarios is better done
