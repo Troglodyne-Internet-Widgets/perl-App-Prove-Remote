@@ -5,60 +5,60 @@ use strict;
 use warnings;
 
 if( !caller() ) {
-	$ENV{'RPROVE_HOST'} ? exit remote_shim() : exit run();
+    $ENV{'RPROVE_HOST'} ? exit remote_shim() : exit run();
 }
 
 sub run {
     my ( $host, $workdir, $interpreter ) = ( '127.0.0.1', 0, '', '/usr/bin/perl' );
 
-	require App::Prove;
-	require Getopt::Long;
+    require App::Prove;
+    require Getopt::Long;
 
     Getopt::Long::Configure( 'auto_help', 'pass_through' );
     Getopt::Long::GetOptions(
         'host|h=s'      => \$host,
-		'workdir=s'     => \$workdir,
-		'interpreter=s' => \$interpreter,
+        'workdir=s'     => \$workdir,
+        'interpreter=s' => \$interpreter,
     );
 
-	# Set ENV bitz
-	local @ENV{qw{RPROVE_HOST RPROVE_WORK_DIR RPROVE_INTERPRETER}} = ($host, $workdir, $interpreter);
+    # Set ENV bitz
+    local @ENV{qw{RPROVE_HOST RPROVE_WORK_DIR RPROVE_INTERPRETER}} = ($host, $workdir, $interpreter);
 
-	my $prove_args = { 'exec' => $0 };
+    my $prove_args = { 'exec' => $0 };
     my $prove = App::Prove->new($prove_args);
     $prove->process_args(@ARGV);
     $prove->merge(1);
 
-	# Run prove
-	return $prove->run ? 0 : 1;
+    # Run prove
+    return $prove->run ? 0 : 1;
 }
 
 sub remote_shim {
-	require Net::OpenSSH;
+    require Net::OpenSSH;
 
-	my $host = $ENV{'RPROVE_HOST'} || '127.0.0.1';
-	my $wd   = $ENV{'RPROVE_WORK_DIR'} || '';
-	my $bin  = $ENV{'RPROVE_INTERPRETER'} || '/usr/bin/perl';
-	my $test = $ARGV[0] || die "No test passed in!";
-	my $ssh  = Net::OpenSSH->new($host);
+    my $host = $ENV{'RPROVE_HOST'} || '127.0.0.1';
+    my $wd   = $ENV{'RPROVE_WORK_DIR'} || '';
+    my $bin  = $ENV{'RPROVE_INTERPRETER'} || '/usr/bin/perl';
+    my $test = $ARGV[0] || die "No test passed in!";
+    my $ssh  = Net::OpenSSH->new($host);
 
-	# Print directly to stdout, as this function merges
-	# STDOUT & STDERR and discards STDIN.
-	# Do this to avoid TTY overflow, and because prove expects
-	# to capture output from STDOUT/ERR anyways.
-	my $system_opts = {
-		'stdout_discard'   => 0,
-		'stderr_discard'   => 0,
-		'stderr_to_stdout' => 1,
-		'stdin_discard'    => 1,
-	};
+    # Print directly to stdout, as this function merges
+    # STDOUT & STDERR and discards STDIN.
+    # Do this to avoid TTY overflow, and because prove expects
+    # to capture output from STDOUT/ERR anyways.
+    my $system_opts = {
+        'stdout_discard'   => 0,
+        'stderr_discard'   => 0,
+        'stderr_to_stdout' => 1,
+        'stdin_discard'    => 1,
+    };
 
-	# Optionally move to the working directory, run the test.
-	my $cd = $wd ? "cd $wd && " : '';
-	$ssh->system( $system_opts, "${cd}${bin} '$wd/$test'" );
+    # Optionally move to the working directory, run the test.
+    my $cd = $wd ? "cd $wd && " : '';
+    $ssh->system( $system_opts, "${cd}${bin} '$wd/$test'" );
 
-	# Net::OpenSSH sets this value correctly for our purposes here.
-	return $?;
+    # Net::OpenSSH sets this value correctly for our purposes here.
+    return $?;
 }
 
 1;
@@ -77,7 +77,7 @@ rprove [options] [file ...]
    -help            You are reading it!
    -host            Host to connect to. Defaults to 127.0.0.1.
    -workdir         Directory to change to before running test(s).
-   -interpreter	    Path on remote to test running interpreter. Defaults to /usr/bin/perl
+   -interpreter     Path on remote to test running interpreter. Defaults to /usr/bin/perl
 
 =head1 OPTIONS
 
