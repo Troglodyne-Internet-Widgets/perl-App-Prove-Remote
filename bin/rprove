@@ -10,13 +10,17 @@ use Getopt::Long                  ();
 exit run() unless caller();
 
 sub run {
-    my ( $host, $verbosity, @tests ) = ('127.0.0.1', 0);
+    my ( $host, $verbosity, $workdir ) = ( '127.0.0.1', 0, '', 'perl' );
     Getopt::Long::Configure( 'bundling', 'auto_help', 'pass_through' );
     Getopt::Long::GetOptions(
         'host|h=s'      => \$host,
         'verbosity|v=i' => \$verbosity,
+		'workdir=s'     => \$workdir,
+		'interpreter=s' => \$interpreter,
     );
-    my $conn = App::Prove::Remote::Connector->new($host, $verbosity);
+    my $conn = App::Prove::Remote::Connector->new(
+		$host, $verbosity, $workdir, $interpreter
+	);
     return 0;
 }
 
@@ -54,13 +58,35 @@ Host to connect to. Defaults to 127.0.0.1
 How verbose you want this to be. Useful if you need to debug
 some strange SSH behavior.
 
+=item B<-wordkir>
+
+Directory to execute the test from. Useful to set if the test requires it.
+
+=item B<-interpreter>
+
+Path to the interpreter to run your tests with. Default is /usr/bin/perl.
+Useful to set if you have perl in a nonstandard location
+or non-perl tests to execute that still emit valid TAP.
+
 =back
 
 =head1 DESCRIPTION
 
 B<rprove> will locally run prove with a --exec argument which is a shim.
 This (remote_shim.pl) will connect to the remote host for the test in
-question, upload it to a temporary directory and run it on the host.
+question and run it on the host.
+
+Why do this? Because sometimes testing certain scenarios is better done
+on a disposable remote environment instead of on the local environment.
+
+If someone has a "smoker" like environment (Jenkins, some other CI) which
+also runs your tests, this could also be of use from the orchestrator's
+end.
+
+Anyways, the user is responsible for ensuring the test (and code under
+test) has been properly deployed to the remote system under test, so
+make sure that's done first if you want this approach to work.
+
 Output of the script is then read by the TAP parser as is expected for
 a seamless testing experience *as if you had ran the test locally*.
 

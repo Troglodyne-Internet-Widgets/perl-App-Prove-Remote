@@ -10,11 +10,12 @@ use experimental 'signatures';
 
 # Cache the connections/objects internally
 my ( $ssh, $sftp );
-sub new ( $class,  $host='127.0.0.1', $verbosity=0 ) {
+sub new ( $class,  $host='127.0.0.1', $verbosity=0, $workdir=undef ) {
     my $obj = bless {
         'ppid'      => $$, # May not need this ultimately
         'host'      => $host,
-        'verbosity' => $verbosity
+        'verbosity' => $verbosity,
+		'workdir'   => $workdir,
     }, $class;
     return $obj;
 }
