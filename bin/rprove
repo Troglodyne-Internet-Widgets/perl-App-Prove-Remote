@@ -9,7 +9,7 @@ if( !caller() ) {
 }
 
 sub run {
-    my ( $host, $workdir, $interpreter ) = ( '127.0.0.1', 0, '', '/usr/bin/perl' );
+    my ( $host, $workdir, $interpreter ) = ( '127.0.0.1', '', '/usr/bin/perl' );
 
     require App::Prove;
     require Getopt::Long;
