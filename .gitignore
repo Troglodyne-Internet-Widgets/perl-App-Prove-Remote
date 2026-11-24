@@ -1,0 +1,15 @@
+*.swp
+*.swo
+*.swn
+
+# Build leavings
+MYMETA.json
+MYMETA.yml
+Makefile
+pm_to_blib
+blib/
+cover_db/
+.build
+# At the root, where dzil build leaves them.  Unanchored, the pattern also
+# hides a test named after the distribution, such as t/App-Prove-Remote-Foo.t.
+/App-Prove-Remote-*
