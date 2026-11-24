@@ -77,7 +77,7 @@ Current Maintainers:
 
 # COPYRIGHT AND LICENSE
 
-Copyright (c) 2022 Thomas A. and George S. Baugh (Troglodyne LLC)
+Copyright (c) 2022 Troglodyne LLC
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:

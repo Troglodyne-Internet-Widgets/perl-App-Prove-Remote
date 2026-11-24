@@ -6,7 +6,7 @@ variables:
   DIST: App-Prove-Remote
   AUTHOR_NAME: George S. Baugh
   AUTHOR_EMAIL: george@troglodyne.net
-  COPYRIGHT_HOLDER: Thomas A. and George S. Baugh (Troglodyne LLC)
+  COPYRIGHT_HOLDER: Troglodyne LLC
   YEAR: '2022'
   CPAN_ID: TEODESIAN
 checks:
