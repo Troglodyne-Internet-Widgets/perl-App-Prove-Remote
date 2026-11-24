@@ -155,6 +155,7 @@ NTP
 OAuth
 OOM
 OpenSSH
+orchestrator
 overcommit
 overcommits
 overcommitted
@@ -163,6 +164,7 @@ passwordless
 PCI
 PCIe
 PEM
+perl
 perlcritic
 perltidy
 PKI
@@ -177,6 +179,7 @@ recurse
 recursed
 recurses
 recursing
+Redistributions
 regenerable
 renderer
 repo

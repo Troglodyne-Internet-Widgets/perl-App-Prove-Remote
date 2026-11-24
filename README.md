@@ -73,7 +73,6 @@ Current Maintainers:
 
 - Andy Baugh <andy@troglodyne.net>
 - Blaine Motsinger <blaine@renderorange.com>
-- troglodyne-robot <trogbot@troglodyne.net>
 
 # COPYRIGHT AND LICENSE
 
