@@ -1,0 +1,20 @@
+flavor: troglodyne-compat
+source:
+  git: https://github.com/Troglodyne-Internet-Widgets/perl-slop-plugin.git
+  path: skills/packaging-perl
+variables:
+  DIST: App-Prove-Remote
+  AUTHOR_NAME: George S. Baugh
+  AUTHOR_EMAIL: george@troglodyne.net
+  COPYRIGHT_HOLDER: Thomas A. and George S. Baugh (Troglodyne LLC)
+  YEAR: '2022'
+  CPAN_ID: TEODESIAN
+checks:
+  CriticProfile:
+    overrides:
+      # rprove hands itself to prove as the program that runs each test, so it
+      # must start when it is run directly.  #!perl only starts once an
+      # install rewrites it, and a copy of bin/rprove in the PATH is never
+      # installed.
+      logicLAB::RequireSheBang:
+        formats: '#!/usr/bin/env perl'
