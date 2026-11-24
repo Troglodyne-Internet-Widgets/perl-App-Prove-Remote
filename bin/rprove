@@ -1,77 +1,27 @@
 #!/usr/bin/env perl
-package App::Prove::Remote::rprove;
+package App::Prove::Remote::Script;
+
+# PODNAME: rprove
+# ABSTRACT: Run prove here, and each test on another host over SSH
+
+use 5.014;
 
 use strict;
-use warnings;
+use warnings FATAL => 'all';
 
-if( !caller() ) {
-    $ENV{'RPROVE_HOST'} ? exit remote_shim() : exit run();
+use App::Prove              ();
+use Getopt::Long            ();
+use Net::OpenSSH            ();
+use Net::OpenSSH::Constants qw{OSSH_SLAVE_CMD_FAILED};
+use POSIX                   ();
+
+if ( !caller() ) {
+    $ENV{'RPROVE_HOST'} ? exit remote_shim(@ARGV) : exit run(@ARGV);
 }
-
-sub run {
-    my ( $host, $workdir, $interpreter ) = ( '127.0.0.1', '', '/usr/bin/perl' );
-
-    require App::Prove;
-    require Getopt::Long;
-
-    Getopt::Long::Configure( 'auto_help', 'pass_through' );
-    Getopt::Long::GetOptions(
-        'host|h=s'      => \$host,
-        'workdir=s'     => \$workdir,
-        'interpreter=s' => \$interpreter,
-    );
-
-    # Set ENV bitz
-    local @ENV{qw{RPROVE_HOST RPROVE_WORK_DIR RPROVE_INTERPRETER}} = ($host, $workdir, $interpreter);
-
-    my $prove_args = { 'exec' => $0 };
-    my $prove = App::Prove->new($prove_args);
-    $prove->process_args(@ARGV);
-    $prove->merge(1);
-
-    # Run prove
-    return $prove->run ? 0 : 1;
-}
-
-sub remote_shim {
-    require Net::OpenSSH;
-
-    my $host = $ENV{'RPROVE_HOST'} || '127.0.0.1';
-    my $wd   = $ENV{'RPROVE_WORK_DIR'} || '';
-    my $bin  = $ENV{'RPROVE_INTERPRETER'} || '/usr/bin/perl';
-    my $test = $ARGV[0] || die "No test passed in!";
-    my $ssh  = Net::OpenSSH->new($host);
-
-    # Print directly to stdout, as this function merges
-    # STDOUT & STDERR and discards STDIN.
-    # Do this to avoid TTY overflow, and because prove expects
-    # to capture output from STDOUT/ERR anyways.
-    my $system_opts = {
-        'stdout_discard'   => 0,
-        'stderr_discard'   => 0,
-        'stderr_to_stdout' => 1,
-        'stdin_discard'    => 1,
-    };
-
-    # Optionally move to the working directory, run the test.
-    my $cd = $wd ? "cd $wd && " : '';
-    $ssh->system( $system_opts, "${cd}${bin} '$wd/$test'" );
-
-    # Net::OpenSSH sets this value correctly for our purposes here.
-    return $?;
-}
-
-1;
-
-__END__
-
-=head1 NAME
-
-rprove - Prove wrapper which executes your tests on the remote host
 
 =head1 SYNOPSIS
 
-rprove [options] [file ...]
+rprove [options] [prove options] [file ...]
 
  Options:
    -help            You are reading it!
@@ -89,11 +39,16 @@ Print a brief help message and exits.
 
 =item B<-host>
 
-Host to connect to. Defaults to 127.0.0.1
+Host to connect to. Defaults to 127.0.0.1.  This is a host as L<Net::OpenSSH>
+takes it, so C<user@host:port> works, as does a C<Host> alias from your OpenSSH
+client configuration.
 
-=item B<-wordkir>
+=item B<-workdir>
 
-Directory to execute the test from. Useful to set if the test requires it.
+Directory on the remote host to execute the test from.  A test path that is
+relative is relative to this directory.  Without it, a relative test path is
+relative to the directory that ssh starts in on the remote host, which is
+usually the home directory of the remote account.
 
 =item B<-interpreter>
 
@@ -101,7 +56,13 @@ Path to the interpreter to run your tests with. Default is /usr/bin/perl.
 Useful to set if you have perl in a nonstandard location
 or non-perl tests to execute that still emit valid TAP.
 
+The remote shell reads this value as it is, so it can carry arguments, such as
+C<"/usr/bin/perl -Ilib">.
+
 =back
+
+Every other option, and every file, goes to L<prove>, as if you had run C<prove>.
+C<rprove> sets C<--exec> and C<--merge> itself.
 
 =head1 DESCRIPTION
 
@@ -123,4 +84,97 @@ make sure that's done first if you want this approach to work.
 Output of the script is then read by the TAP parser as is expected for
 a seamless testing experience *as if you had ran the test locally*.
 
+The exit code of a test on the remote host is the exit code of the shim, so
+C<prove> sees a test that exits nonzero as a failure, as it does locally.
+
+=head1 ENVIRONMENT
+
+B<rprove> passes its options to the shim in C<RPROVE_HOST>, C<RPROVE_WORK_DIR>
+and C<RPROVE_INTERPRETER>.  When C<RPROVE_HOST> is set, B<rprove> runs as the
+shim rather than as C<prove>.
+
+=head1 FUNCTIONS
+
+The program is a modulino: C<require> it, and it runs nothing.
+
+=head2 run(@argv)
+
+Takes the options above out of C<@argv>, and runs L<App::Prove> with the rest,
+with itself as the program that runs each test.  Returns the exit code: 0 when
+every test passed, and 1 otherwise.
+
 =cut
+
+sub run {
+    my (@argv) = @_;
+    my ( $host, $workdir, $interpreter ) = ( '127.0.0.1', '', '/usr/bin/perl' );
+
+    my $parser = Getopt::Long::Parser->new( config => [ 'auto_help', 'pass_through' ] );
+    $parser->getoptionsfromarray(
+        \@argv,
+        'host|h=s'      => \$host,
+        'workdir=s'     => \$workdir,
+        'interpreter=s' => \$interpreter,
+    );
+
+    local @ENV{qw{RPROVE_HOST RPROVE_WORK_DIR RPROVE_INTERPRETER}} = ( $host, $workdir, $interpreter );
+
+    my $prove = App::Prove->new( { 'exec' => $0 } );
+    $prove->process_args(@argv);
+    $prove->merge(1);
+
+    return $prove->run ? 0 : 1;
+}
+
+=head2 remote_shim($test)
+
+Runs the test C<$test> on the host in C<RPROVE_HOST>, and prints what it
+prints, standard error included.  Returns the exit code of the test.  Dies when
+it has no test, or when it cannot connect, or when ssh fails.
+
+=cut
+
+sub remote_shim {
+    my ($test) = @_;
+
+    my $host = $ENV{'RPROVE_HOST'}        || '127.0.0.1';
+    my $wd   = $ENV{'RPROVE_WORK_DIR'}    || '';
+    my $bin  = $ENV{'RPROVE_INTERPRETER'} || '/usr/bin/perl';
+    die "No test passed in!\n" if !defined $test;
+
+    my $ssh = Net::OpenSSH->new($host);
+    die "Cannot connect to $host: " . $ssh->error . "\n" if $ssh->error;
+
+    # Print directly to stdout, as this function merges
+    # STDOUT & STDERR and discards STDIN.
+    # Do this to avoid TTY overflow, and because prove expects
+    # to capture output from STDOUT/ERR anyways.
+    my $system_opts = {
+        'stdout_discard'   => 0,
+        'stderr_discard'   => 0,
+        'stderr_to_stdout' => 1,
+        'stdin_discard'    => 1,
+    };
+
+    # Optionally move to the working directory, run the test.
+    my $command = join q{ }, $bin, scalar $ssh->shell_quote($test);
+    $command = join q{ }, 'cd', scalar $ssh->shell_quote($wd), '&&', $command if $wd ne q{};
+    return 0 if $ssh->system( $system_opts, $command );
+
+    die "Cannot run $test on $host: " . $ssh->error . "\n" if $ssh->error != OSSH_SLAVE_CMD_FAILED;
+    return exit_code($?);
+}
+
+=head2 exit_code($status)
+
+The exit code for a wait status such as C<$?>.  A process that a signal
+stopped gets the exit code of a perl that died, 255, so that it still fails.
+
+=cut
+
+sub exit_code {
+    my ($status) = @_;
+    return POSIX::WIFEXITED($status) ? POSIX::WEXITSTATUS($status) : 255;
+}
+
+1;
