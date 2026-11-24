@@ -32,6 +32,8 @@ backends
 BackPAN
 backtick
 basename
+Baugh
+Blaine
 bugtracker
 checksummed
 checksumming
@@ -49,6 +51,7 @@ chroot
 chrooted
 chrooting
 chroots
+CI
 CIDR
 CIDRs
 CLI
@@ -116,6 +119,8 @@ LDAP
 LDAPS
 LDIF
 lifecycle
+LLC
+localhost
 lookups
 loopback
 lowercased
@@ -137,6 +142,8 @@ misconfigured
 misconfigures
 misconfiguring
 mistyped
+modulino
+Motsinger
 mtime
 MX
 nameserver
@@ -147,6 +154,7 @@ NONINFRINGEMENT
 NTP
 OAuth
 OOM
+OpenSSH
 overcommit
 overcommits
 overcommitted
@@ -174,6 +182,7 @@ renderer
 repo
 repos
 RPC
+rprove
 RSA
 rsync
 rsynced
@@ -187,6 +196,8 @@ sftp
 SHA
 SMTP
 SRV
+ssh
+SSH
 sshd
 SSL
 stdin
@@ -206,6 +217,7 @@ symlinks
 sysctl
 syslog
 systemd
+TAP
 TCP
 teardown
 templated
@@ -216,6 +228,7 @@ TLDs
 TLS
 TODO
 toolchain
+Troglodyne
 TXT
 udev
 UDP
@@ -244,4 +257,5 @@ VPN
 VPNs
 WAL
 whitespace
+workdir
 YAML
